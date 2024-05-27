@@ -1,4 +1,4 @@
-import { Actor, CollisionType, Color, Engine, vec } from "excalibur";
+import { Actor, CollisionType, Color, Engine, vec, Text, Font } from "excalibur";
 
 // 1 - Criar uma instancia de Engine, que representa o jogo
 const game = new Engine({
@@ -14,6 +14,7 @@ const barra = new Actor({
 	width: 200,
 	height: 20,
 	color: Color.Chartreuse
+
 })
 
 // Define o tipo de colisão da barra
@@ -39,7 +40,7 @@ const bolinha = new Actor({
 bolinha.body.collisionType = CollisionType.Passive
 
 // 5 - Criar movimentação na boinha
-const velocidadeBolinha = vec(200, 200)
+const velocidadeBolinha = vec(1000, 1000)
 
 // Apos 1 segundo (1000 ms), Define a velocidaee da bolinha em x = 100 e y = 100
 setTimeout(() => {
@@ -69,15 +70,9 @@ bolinha.on("postupdate", () => {
 	// }
 })
 
-// Insere o actor barra no game
-game.add(barra)
-
-// Insere o actor bolinha no game
-game.add(bolinha)
-
 // 7 - criar os blocos
 // tamanho entre os blocos
-const padding = 20 
+const padding = 20
 const xoffset = 65
 const yoffset = 20
 
@@ -86,16 +81,97 @@ const colunas = 5
 const linhas = 3
 
 // cor dos quadrado
-const corBloco = [Color.Violet, Color.Orange, Color.Yellow]
+const corBloco = [Color.Red, Color.Orange, Color.Yellow]
 
 
 // const larguraBloco = (game.drawWidth / colunas) - padding - (padding / colunas)
 const larguraBloco = 136
 const alturaBloco = 30
 
-const listaBloco: Actor[] = [] 
+const listaBloco: Actor[] = []
+
+// renderização 3 linhas
+for (let j = 0; j < linhas; j++) {
+	// Renderização dos 5 bloquinhos
+	for (let i = 0; i < colunas; i++) {
+		listaBloco.push(
+			new Actor({
+				x: xoffset + i * (larguraBloco + padding) + padding,
+				y: yoffset + j * (alturaBloco + padding) + padding,
+				width: larguraBloco,
+				height: alturaBloco,
+				color: corBloco[j]
+			})
+		)
+	}
+}
+
+let colidindo: boolean = false
+// detectar a colisão
+bolinha.on("collisionstart", (event) => {
+	// verificar se a bolinha colidiu com algum bloco destrutivel
+	if (listaBloco.includes(event.other)) {
+		// destruir o bloco colidido
+		event.other.kill()
+	}
+
+	// rebater a bolinha e inverter as direções
+	let interseccao = event.contact.mtv.normalize()
 
 
+	if (!colidindo) {
+		colidindo = true
 
+		// interseccao.x e interseccao.y
+		// o maior representao o eixo onde houve contato
+		if (Math.abs(interseccao.x) > Math.abs(interseccao.y)) {
+			// bolinha.vel.x = -bolinha.vel.x
+			// bolinha.vel.x *= -1
+			bolinha.vel.x = bolinha.vel.x * -1
+		} else {
+			bolinha.vel.y = bolinha.vel.y * -1
+		}
+	}
+})
+
+bolinha.on("collisionend", () => {
+	colidindo = false
+})
+
+bolinha.on('exitviewport', () => {
+	alert("acho que morreu")
+	window.location.reload()
+})
+
+// Insere o actor barra no game
+game.add(barra)
+
+// Insere o actor bolinha no game
+game.add(bolinha)
+
+// adicionar os blocos
+listaBloco.forEach(bloco => {
+	// define o tipo de colisor de cada bloco
+	bloco.body.collisionType = CollisionType.Active
+	game.add(bloco)
+})
+
+let Pontos = 0
+
+const textoPontos = new Text({
+	text: "Hello world",
+	font: new Font({ size: 20 })
+})
+
+const objetoTexto = new Actor({
+	x: game.drawWidth - 80,
+	y: game.drawHeight - 15
+})
+
+objetoTexto.graphics.use(textoPontos)
+
+game.add(objetoTexto)
+
+// npm run start
 //iniciar jogo 
 game.start()
