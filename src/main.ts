@@ -1,101 +1,102 @@
-import { Actor, CollisionType, Color, Engine, vec, Text, Font } from "excalibur";
+import { Actor, CollisionType, Color, Engine, vec, Font, Label, FontUnit, Sound, Loader, } from "excalibur"
 
-// 1 - Criar uma instancia de Engine, que representa o jogo
 const game = new Engine({
 	width: 800,
 	height: 600
 })
 
-// 2 - criar barra do player
-// game.drawHeigth = altura do game
 const barra = new Actor({
 	x: 150,
 	y: game.drawHeight - 40,
 	width: 200,
 	height: 20,
 	color: Color.Chartreuse
-
 })
 
-// Define o tipo de colisão da barra
-// CllisiononType.fixed = significa que ele não ira se "mexer" quando colidir
 barra.body.collisionType = CollisionType.Fixed
 
 
 
-// 3 - Movimentar a barra de acordo com a posição do mouse
+game.add(barra)
+
 game.input.pointers.primary.on("move", (event) => {
-	// faz a posição x da barra, ser igual a posição x do mouse
 	barra.pos.x = event.worldPos.x
+
 })
 
-// 4 - criar actor bolinha
 const bolinha = new Actor({
 	x: 100,
 	y: 300,
 	radius: 10,
-	color: Color.Red
+	color: Color.White
 })
 
 bolinha.body.collisionType = CollisionType.Passive
 
-// 5 - Criar movimentação na boinha
-const velocidadeBolinha = vec(1000, 1000)
+let coresbolinhas = [
+	Color.Green, 
+	Color.Yellow, 
+	Color.Violet, 
+	Color.Red,	
+	Color.Blue,
+	Color.Black,
+	Color.Rose,
+	Color.DarkGray,
+	Color.Orange,
+	Color.Magenta,
+	Color.Gray,
 
-// Apos 1 segundo (1000 ms), Define a velocidaee da bolinha em x = 100 e y = 100
+]
+
+
+const velocidadedaBolinha = vec(900, 900)
+
 setTimeout(() => {
-	bolinha.vel = velocidadeBolinha
+	bolinha.vel = velocidadedaBolinha
 }, 1000)
 
-// 6 - fazer bolinha rebater na parede
 bolinha.on("postupdate", () => {
-	// se a bolinha colidir com o lado esquerdo
 	if (bolinha.pos.x < bolinha.width / 2) {
-		bolinha.vel.x = velocidadeBolinha.x
+		bolinha.vel.x = velocidadedaBolinha.x
 	}
-
-	// se a bolinha colidir com o lado direto
 	if (bolinha.pos.x + bolinha.width / 2 > game.drawWidth) {
-		bolinha.vel.x = -velocidadeBolinha.x
+		bolinha.vel.x = -velocidadedaBolinha.x
 	}
 
-	// se a bolinha colidir com a parte superior
 	if (bolinha.pos.y < bolinha.height / 2) {
-		bolinha.vel.y = velocidadeBolinha.y
+		bolinha.vel.y = velocidadedaBolinha.y
 	}
+	//if (bolinha.pos.y + bolinha.height /2 > game.drawHeight) {
+	//	bolinha.vel.y = -velocidadedaBolinha.y
 
-	// se a bolinha colidir com a parte inferior
-	// if (bolinha.pos.y + bolinha.height / 2 > game.drawHeight) {
-	// 	bolinha.vel.y = -velocidadeBolinha.y 
-	// }
+	//}
+
+
 })
 
-// 7 - criar os blocos
-// tamanho entre os blocos
+game.add(bolinha)
+
 const padding = 20
+
 const xoffset = 65
 const yoffset = 20
 
-// quantidade de blocos e fileiras
 const colunas = 5
 const linhas = 3
 
-// cor dos quadrado
-const corBloco = [Color.Red, Color.Orange, Color.Yellow]
+const corBloco = [Color.Red, Color.Green, Color.Blue]
 
-
-// const larguraBloco = (game.drawWidth / colunas) - padding - (padding / colunas)
-const larguraBloco = 136
+const larguraBloco = (game.drawWidth / colunas) - padding - (padding / colunas)
 const alturaBloco = 30
 
-const listaBloco: Actor[] = []
+const listaBlocos: Actor[] = []
 
-// renderização 3 linhas
+
 for (let j = 0; j < linhas; j++) {
-	// Renderização dos 5 bloquinhos
 	for (let i = 0; i < colunas; i++) {
-		listaBloco.push(
+		listaBlocos.push(
 			new Actor({
+
 				x: xoffset + i * (larguraBloco + padding) + padding,
 				y: yoffset + j * (alturaBloco + padding) + padding,
 				width: larguraBloco,
@@ -106,41 +107,94 @@ for (let j = 0; j < linhas; j++) {
 	}
 }
 
+
+listaBlocos.forEach(bloco => {
+	bloco.body.collisionType = CollisionType.Active
+
+	game.add(bloco)
+})
+
+let pontos = 0
+
+
+
+const textoPontos = new Label({
+	text: pontos.toString(),
+	font: new Font({
+		size: 40,
+		color: Color.White,
+		strokeColor: Color.Black,
+		unit: FontUnit.Px,
+
+	}),
+	pos: vec(600, 500)
+
+})
+
+game.add(textoPontos)
+
+
+
+
 let colidindo: boolean = false
-// detectar a colisão
+
+
+
+const som = new Sound('./src/audio/somcoli.wav')
+const som2 = new Sound('./src/audio/gameover.wav')
+const loader = new Loader([som, som2]);
+await game.start(loader);
+
 bolinha.on("collisionstart", (event) => {
-	// verificar se a bolinha colidiu com algum bloco destrutivel
-	if (listaBloco.includes(event.other)) {
-		// destruir o bloco colidido
+
+
+	if (listaBlocos.includes(event.other)) {
+
+
+
+		som.play(0.5);
 		event.other.kill()
+
+		pontos++
+
+		bolinha.color = coresbolinhas[ Math.trunc (Math.random() * 11) ]
+
+		textoPontos.text = pontos.toString()
+
+		if (pontos == 15) {
+			alert("Venceu")
+	window.location.reload()
+		}
 	}
 
-	// rebater a bolinha e inverter as direções
 	let interseccao = event.contact.mtv.normalize()
-
 
 	if (!colidindo) {
 		colidindo = true
 
-		// interseccao.x e interseccao.y
-		// o maior representao o eixo onde houve contato
 		if (Math.abs(interseccao.x) > Math.abs(interseccao.y)) {
-			// bolinha.vel.x = -bolinha.vel.x
-			// bolinha.vel.x *= -1
 			bolinha.vel.x = bolinha.vel.x * -1
 		} else {
 			bolinha.vel.y = bolinha.vel.y * -1
 		}
 	}
+
+
 })
+
 
 bolinha.on("collisionend", () => {
 	colidindo = false
 })
 
-bolinha.on('exitviewport', () => {
-	alert("acho que morreu")
-	window.location.reload()
+
+bolinha.on('exitviewport',  () => {
+	  som2.play(0.5)
+	.then(() => {
+
+		alert("Morreu")
+		window.location.reload()
+	})
 })
 
 // Insere o actor barra no game
@@ -150,28 +204,11 @@ game.add(barra)
 game.add(bolinha)
 
 // adicionar os blocos
-listaBloco.forEach(bloco => {
+listaBlocos.forEach(bloco => {
 	// define o tipo de colisor de cada bloco
 	bloco.body.collisionType = CollisionType.Active
 	game.add(bloco)
 })
-
-let Pontos = 0
-
-const textoPontos = new Text({
-	text: "Hello world",
-	font: new Font({ size: 20 })
-})
-
-const objetoTexto = new Actor({
-	x: game.drawWidth - 80,
-	y: game.drawHeight - 15
-})
-
-objetoTexto.graphics.use(textoPontos)
-
-game.add(objetoTexto)
-
 // npm run start
 //iniciar jogo 
 game.start()
